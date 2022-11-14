@@ -1,0 +1,45 @@
+{{- if .Values.ingress.enabled -}}
+{{- $suffixName := include "suffix-name" . -}}
+{{- $svcPath := include "svc.ingress.path.lookup" . -}}
+
+{{- $ingressPath := printf "/%s%s-%s" .Values.ingress.ingressPrefixForDevelopment $suffixName $svcPath -}}
+
+{{- $name := include "svc.fullname" . -}}
+
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: {{ template "svc.fullname" . }}
+  labels:
+    app: {{ template "svc.name" .}}
+    chart: {{ template "svc.chart" .}}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    releaseNo: {{ .Values.releaseNo }}
+
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "180"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "180"
+
+spec:
+{{- if .Values.ingress.tls }}
+  tls:
+  - hosts:
+  {{- range .Values.ingress.tls.hosts }}
+    - {{ . }}
+  {{- end }}
+{{- end }}
+    secretName: {{ .Values.ingress.tls.secretName }}
+  rules:
+    {{- range .Values.ingress.hosts  }}
+    - host: {{ . }}
+      http:
+        paths:
+          - path: {{ $ingressPath }}(/|$)(.*)
+            backend:
+              serviceName: {{ $name }}
+              servicePort: http
+  {{- end }}
+{{- end }}

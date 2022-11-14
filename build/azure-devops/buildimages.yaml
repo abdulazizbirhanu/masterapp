@@ -1,0 +1,43 @@
+parameters:
+  services: ''
+  configuration: ''
+  registryServiceConnection: ''
+  registryAddress: ''
+  imageRepositoryAddress: ''
+
+jobs:
+- job: BuildLinux
+  pool:
+    vmImage: 'ubuntu-18.04'
+
+  #container: ubuntu:16.04
+
+  steps:
+
+  - task: DockerCompose@0
+    displayName: Compose build ${{ parameters.services }}
+    inputs:
+      containerregistrytype: 'Azure Container Registry'
+      azureSubscription: $(registryServiceConnection)
+      azureContainerRegistry: $(registryAddress)
+      dockerComposeFile: 'src/docker-compose.yml'
+      dockerComposeCommand: 'build ${{ parameters.services }}'
+      action: 'Run a Docker Compose command'  # Options: build Services, push Services, run Services, run A Specific Service, lock Services, write Service Image Digests, combine Configuration, run A Docker Compose Command
+      dockerComposeFileArgs: |
+        TAG=$(configuration)
+        PLATFORM=linux
+        REGISTRY=${{ parameters.imageRepositoryAddress }}
+
+  - task: DockerCompose@0
+    displayName: Compose push ${{ parameters.services }}
+    inputs:
+      containerregistrytype: 'Azure Container Registry'
+      azureSubscription: $(registryServiceConnection)
+      azureContainerRegistry: $(registryAddress)
+      dockerComposeFile: 'src/docker-compose.yml'
+      action: 'Run a Docker Compose command'  # Options: build Services, push Services, run Services, run A Specific Service, lock Services, write Service Image Digests, combine Configuration, run A Docker Compose Command
+      dockerComposeCommand: 'push ${{ parameters.services }}'
+      dockerComposeFileArgs: |
+        TAG=$(configuration)
+        PLATFORM=linux
+        REGISTRY=${{ parameters.imageRepositoryAddress }}

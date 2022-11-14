@@ -1,0 +1,21 @@
+version: '3.4'
+
+# but values present in the environment vars at runtime will always override those defined inside the .env file
+
+services:
+  dataapi:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionString=${DATABASE_CONNECTION}
+      - ApplicationInsights__InstrumentationKey=${INSTRUMENTATION_KEY}
+      - IdentityUrl=${IDENTITY_URL}
+      - DataConfig__EmailConfig__URI=https://emailsender.com/
+      - DataConfig__EmailConfig__RelativeApiPath=api/Office/SendMail
+    ports:
+      - 4609:80
+    volumes:
+      - authstore:/data/key
+      
+volumes:
+  authstore:
+    external: false

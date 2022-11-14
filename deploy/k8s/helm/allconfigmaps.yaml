@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: allconfigmaps
+  labels:
+    releaseNo: {{ .Values.releaseNo }}
+data:
+  _InstrumentationKey: yourinstrumentationkey
+  _IdentityUrl: youridentityserver
+
+
+

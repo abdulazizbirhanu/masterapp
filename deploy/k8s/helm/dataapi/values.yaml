@@ -1,0 +1,87 @@
+replicaCount: 3
+upgradeStrategy: RollingUpdate
+clusterName: aks-cluster-test
+
+# The value get override by a value provided by pipeline
+# This label identifies the latest individual release id that updated or created the resource
+releaseNo: nil
+
+# if you are to enable/disable below naming overrides, be caution to avoid breaking existing naming or discripancy
+#nameOverride: dataapi
+#fullnameOverride: dataapi-masterapp
+
+image:
+  # this gets populated by pipeline with the right context
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  port: 80
+  grpcPort: 81  
+
+ingress:
+  enabled: true
+
+  # This appends prefix for development/testing route to avoid collision when prod and test apps installed on same environment or cluster
+  ingressPrefixForDevelopment: ''
+  mesh: 
+    annotations: 
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: "/"
+    ingress.kubernetes.io/rewrite-target: "/"
+  tls:
+    hosts:
+    - mycname.ethiopianairlines.com
+    secretName: tls-secret
+  hosts:
+
+  - mycname.ethiopianairlines.com
+
+resources: {}
+
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# env defines the environment variables that will be declared in the pod
+env:
+  urls:
+  # configmap declares variables which value is taken from the config map defined in template configmap.yaml (name is name of var and key the key in configmap).
+  secret:
+    - name: ConnectionString
+      key: _ConnectionString
+  allconfigmap:
+    - name: ApplicationInsights__InstrumentationKey
+      key: _InstrumentationKey
+    - name: IdentityUrl
+      key: _IdentityUrl
+  configmap:
+    - name: DataConfig__EmailConfig__URI
+      key: _DataConfig__EmailConfig__URI
+    - name: DataConfig__EmailConfig__RelativeApiPath
+      key: _DataConfig__EmailConfig__RelativeApiPath
+
+  # values define environment variables with a fixed value (no configmap involved) (name is name of var, and value is its value)
+  values:
+    - name: OrchestratorType
+      value: 'K8S'
+    - name: PORT
+      value: "80"
+    - name: GRPC_PORT
+      value: "81"      
+probes:
+  liveness:
+    path: /liveness
+    initialDelaySeconds: 10
+    periodSeconds: 15
+    port: 80
+  readiness:
+    path: /hc
+    timeoutSeconds: 5
+    initialDelaySeconds: 90
+    periodSeconds: 60
+    port: 80

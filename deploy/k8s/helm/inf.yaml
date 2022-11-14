@@ -1,0 +1,25 @@
+# This is customized based on eshopcontainer reference project
+# It is used on all charts, so ** MUST BE INCLUDED ** on every deployment
+
+# app global settings
+
+inf:
+  #cert manager is not implemented, may consider its feasibility for furture use
+  tls:
+    enabled: false
+    issuer: ""
+
+  # inf.k8s defines Kubernetes cluster global config
+  k8s:
+    dns:  ""
+
+  # image registry config details
+  # uncomment "registry" to specify registry secret
+  # this need to be configured
+  registry:
+    # secretName is the name of the secret inside k8s 
+    secretName: yoursecret 
+    server: yourserver
+    login: username
+    pwd: password
+

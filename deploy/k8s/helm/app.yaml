@@ -1,0 +1,25 @@
+# This is customized based on eshopcontainer reference project
+
+# This helm values file defines app-based settings
+# Charts use those values, so this file **MUST** be included in all chart releases
+
+# app global settings
+
+app:
+  name: "masterapp"                              # Override for custom app name
+  envpostfix: "dev"                                     # postfix on resource name based on environment config, dev/prod, its value comes from pipeline
+ 
+  # ingress entry/path settings
+  ingress:
+    #overrides local settings
+    entries:
+      dataapi: dataapi                                      # ingress entry for web svc
+      
+  # micro service name settings, key:value, replace values as required
+  svc:
+    dataapi: dataapi                                         # service name for web svc
+  identitysvc:
+    # full qualified name for identity server address, {namespace}.{servicename}
+    # provide the name of the svc and application where the authsvc resides 
+    # environment placeholer, {env-placeholder} get replaced by the pipeline depending weather it's a dev/prod deployment
+    address: youridentityservicename

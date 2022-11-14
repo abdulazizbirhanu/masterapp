@@ -1,0 +1,99 @@
+variables:
+
+- name: serviceName
+  value: dataapi
+- template: ../globalpipelinevariables.yaml
+
+trigger:
+  branches:
+    #include:
+    exclude:
+    - master
+    - dev
+pr:
+  branches:
+    include:
+    - master
+
+stages:
+  - stage: BuildAndPushToTestRegisty
+    jobs:
+    - template: ../buildpushimage.yaml
+      parameters:
+        services: $(serviceName)
+        configuration: $(configuration)
+        registryAddress: $(registryAddressTest)
+        registryServiceConnection: $(registryServiceConnectionTest)
+        imageRepositoryAddress: $(imageRepositoryAddressTest)
+
+    - template: ../multiarch.yaml
+      parameters:
+        services: $(serviceName)
+        configuration: $(configuration)
+        registryServiceConnection: $(registrySubServiceConnectionTest)
+        imageRepositoryAddress: $(imageRepositoryAddressTest)
+        dependentJob: BuildLinux
+
+  - stage: PushToProductionRegistry
+    variables: 
+      isMasterBranch: $[eq(variables['system.pullRequest.targetBranch'], 'refs/heads/master')]
+    dependsOn:
+    - BuildAndPushToTestRegisty
+    # run only when branch is master, previous stage test deployment has succeeded and has a branch policy of pull request.
+    condition: and(succeeded(), eq(variables.isMasterBranch, true), eq(variables['Build.Reason'], 'PullRequest'))
+    jobs:
+    - template: ../prodpushimage.yaml
+      parameters:
+        services: $(serviceName)
+        configuration: $(configuration)
+        registryAddressTest: $(registryAddressTest)
+        registryAddressProd: $(registryAddressProd)
+        registryServiceConnectionTest: $(registrySubServiceConnectionTest)
+        imageRepositoryAddressTest: $(imageRepositoryAddressTest)
+        registryServiceConnectionProd: $(registryServiceConnectionProd)
+        imageRepositoryAddressProd: $(imageRepositoryAddressProd)
+    - template: ../multiarch.yaml
+      parameters:
+        services: $(serviceName)
+        configuration: $(configuration)
+        registryServiceConnection: $(registrySubServiceConnectionProd)
+        imageRepositoryAddress: $(imageRepositoryAddressProd)
+        dependentJob: PushProduction
+
+  - stage: DeployTest
+    dependsOn: 
+    - BuildAndPushToTestRegisty
+    jobs:
+    - template: ../deployhelmcharts.yaml
+      parameters:
+        applicationReleaseName: $(serviceName)-$(applicationReleaseName)
+        namespace: $(namespace)
+        aksServiceConnection: $(aksServiceConnectionTest)
+        chartPath: $(System.DefaultWorkingDirectory)/deploy/k8s/helm/$(serviceName)
+        destination: $(System.DefaultWorkingDirectory)/deploy/k8s/helm/$(serviceName)
+        valuesPath: $(System.DefaultWorkingDirectory)/deploy/k8s/helm
+        releaseNo: $(serviceName)-$(applicationReleaseName)-$(Build.BuildNumber)
+        configuration: $(configuration)
+        envpostfix: $(temp)
+        registryAddress: $(registryAddressTest)
+  - stage: DeployProduction
+    variables: 
+      isMasterBranch: $[eq(variables['system.pullRequest.targetBranch'], 'refs/heads/master')]
+    dependsOn:
+    - PushToProductionRegistry
+    - DeployTest
+    ## run only when branch is master, previous stage test deployment has succeeded and has a branch policy of pull request.
+    condition: and(succeeded(), eq(variables.isMasterBranch, true), eq(variables['Build.Reason'], 'PullRequest'))
+    jobs:
+    - template: ../deployhelmcharts.yaml
+      parameters:
+        applicationReleaseName: $(serviceName)-$(applicationReleaseName)
+        namespace: $(namespace)
+        aksServiceConnection: $(aksServiceConnectionProd)
+        chartPath: $(System.DefaultWorkingDirectory)/deploy/k8s/helm/$(serviceName)
+        destination: $(System.DefaultWorkingDirectory)/deploy/k8s/helm/$(serviceName)
+        valuesPath: $(System.DefaultWorkingDirectory)/deploy/k8s/helm
+        releaseNo: $(serviceName)-$(applicationReleaseName)-$(Build.BuildNumber)
+        configuration: $(configuration)
+        envpostfix: $(temp)
+        registryAddress: $(registryAddressProd)

@@ -1,0 +1,49 @@
+parameters:
+  services: ''
+  configuration: ''
+
+  registryServiceConnectionTest: ''
+  registryAddressTest: ''
+  imageRepositoryAddressTest: ''
+
+  registryServiceConnectionProd: ''
+  registryAddressProd: ''
+  imageRepositoryAddressProd: ''
+
+jobs:
+- job: PushProduction
+  pool:
+    vmImage: 'ubuntu-18.04'
+
+  steps:
+
+  - task: Docker@2
+    displayName: Login to test registry
+    inputs:
+      containerRegistry: ${{ parameters.registryServiceConnectionTest }}
+      command: login
+  
+  - powershell: |
+      echo 'Tagging image built from previous stage pulled from test registry'
+      docker pull  ${{ parameters.imageRepositoryAddressTest }}/${{ parameters.services }}:$(Build.BuildNumber)-$(configuration)
+      docker image ls
+      Write-Host 'Tagging image for production ..'
+      docker tag ${{ parameters.imageRepositoryAddressTest }}/${{ parameters.services }}:$(Build.BuildNumber)-$(configuration) ${{ parameters.imageRepositoryAddressProd }}/${{ parameters.services }}:linux-$(configuration)
+      docker image ls
+    displayName: Tagging built image to push to production registry
+    failOnStderr: true
+    continueOnError: true
+
+  - task: DockerCompose@0
+    displayName: Compose push ${{ parameters.services }}
+    inputs:
+      containerregistrytype: 'Azure Container Registry'
+      azureSubscription: ${{ parameters.registryServiceConnectionProd }}
+      azureContainerRegistry: ${{ parameters.registryAddressProd }}
+      dockerComposeFile: 'src/docker-compose.yml'
+      action: 'Run a Docker Compose command'
+      dockerComposeCommand: 'push ${{ parameters.services }}'
+      dockerComposeFileArgs: |
+        TAG=$(configuration)
+        PLATFORM=linux
+        REGISTRY=${{ parameters.imageRepositoryAddressProd }}

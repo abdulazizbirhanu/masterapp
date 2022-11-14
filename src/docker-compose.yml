@@ -1,0 +1,8 @@
+version: '3.4'
+
+services:
+  dataapi:
+    image: ${REGISTRY:-masterapp.ethiopian}/dataapi:${PLATFORM:-linux}-${TAG:-latest}
+    build:
+      context: .
+      dockerfile: Services/DataAPI/Dockerfile

@@ -1,0 +1,27 @@
+{{- $name := include "svc.fullname" . -}}
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    app: {{ template "svc.name" .}}
+    chart: {{ template "svc.chart" .}}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    releaseNo: {{ .Values.releaseNo }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: {{ .Values.service.grpcPort }}
+      targetPort: grpc
+      protocol: TCP
+      name: grpc
+  selector:
+    app: {{ template "svc.name" .}}
+    chart: {{ template "svc.chart" .}}
+    release: {{ .Release.Name }}

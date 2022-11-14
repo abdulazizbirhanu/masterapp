@@ -1,0 +1,28 @@
+parameters:
+  services: ''
+  registryServiceConnection: ''
+  imageRepositoryAddress: ''
+  dependentJob: ''
+
+jobs:
+- job: Manifest
+  dependsOn:
+    - ${{ parameters.dependentJob }}  
+  pool: 
+    vmImage: 'Ubuntu 18.04'
+  steps:
+  - task: Docker@2
+    displayName: Docker Login
+    inputs:
+      command: login
+      containerregistrytype: 'Container Registry'
+      containerRegistry: ${{ parameters.registryServiceConnection }}
+  - bash: |
+      mkdir -p ~/.docker
+      sed '$ s/.$//' $DOCKER_CONFIG/config.json > ~/.docker/config.json
+      echo ',"experimental": "enabled" }' >> ~/.docker/config.json
+      docker --config ~/.docker manifest create ${{ parameters.imageRepositoryAddress }}/${{ parameters.services }}:$(configuration) ${{ parameters.imageRepositoryAddress }}/${{ parameters.services }}:linux-$(configuration)
+      docker --config ~/.docker manifest push ${{ parameters.imageRepositoryAddress }}/${{ parameters.services }}:$(configuration)
+      docker --config ~/.docker manifest create ${{ parameters.imageRepositoryAddress }}/${{ parameters.services }}:$(Build.BuildNumber)-$(configuration) ${{ parameters.imageRepositoryAddress }}/${{ parameters.services }}:linux-$(configuration)
+      docker --config ~/.docker manifest push ${{ parameters.imageRepositoryAddress }}/${{ parameters.services }}:$(Build.BuildNumber)-$(configuration)
+    displayName: Create multiarch manifest

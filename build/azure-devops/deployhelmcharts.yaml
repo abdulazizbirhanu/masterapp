@@ -1,0 +1,42 @@
+parameters:
+  applicationReleaseName: ''
+  namespace: ''
+  chartPath: ''
+  destination: ''
+  valuesPath: ''
+  releaseNo: ''
+  configuration: ''
+  envpostfix: ''
+  aksServiceConnection: ''
+  registryAddress: ''
+
+jobs:
+- job: DeployHelmChart
+  pool:
+    vmImage: 'ubuntu-18.04'
+  steps:
+  - task: HelmDeploy@0
+    displayName: Helm package
+    inputs:
+      command: package
+      save: false
+      chartPath: ${{ parameters.chartPath }}
+      destination:  ${{ parameters.destination }}
+      chartVersion: '$(Build.BuildNumber)'
+
+  - task: HelmDeploy@0
+    displayName: Helm upgrade
+    inputs:
+      connectionType: 'Kubernetes Service Connection'
+      kubernetesServiceConnection: ${{ parameters.aksServiceConnection }}
+      command: upgrade
+      chartType: filepath
+      chartPath: ${{ parameters.destination }}
+      releaseName: ${{ parameters.applicationReleaseName }}
+      overrideValues: 'releaseNo=${{ parameters.releaseNo }},ingress.ingressPrefixForDevelopment=$(ingressPrefixForDevelopment),image.tag=$(configuration),app.envpostfix=${{ parameters.envpostfix }},inf.registry.server=${{ parameters.registryAddress }}'
+      namespace: $(namespace)
+      arguments: '-f ${{ parameters.valuesPath }}/inf.yaml -f ${{ parameters.valuesPath }}/app.yaml '
+      install: true
+      waitForExecution: false
+      #to fix helm issue, may remove this when helm version is updated and issue no longer exists, https://github.com/microsoft/azure-pipelines-tasks/issues/13594
+      failOnStderr: false

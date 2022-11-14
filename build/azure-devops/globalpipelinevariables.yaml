@@ -1,0 +1,34 @@
+variables:
+
+    applicationName: 'masterapp'
+
+    # registry details for cert/test
+    registrySubServiceConnectionTest: dev-acr-service-connection1
+    registryServiceConnectionTest: dev-acr-service-connection
+    registryAddressTest: 'ethiopian.azurecr.io'
+    imageRepositoryAddressTest: $(registryAddressTest)/$(applicationName)
+    
+    # registry details for prod
+    registrySubServiceConnectionProd: dev-acr-service-connection1-prod
+    registryServiceConnectionProd: dev-acr-service-connection-prod
+    registryAddressProd: 'ethiopianacrprod.azurecr.io'
+    imageRepositoryAddressProd: $(registryAddressProd)/$(applicationName)
+
+    # AKS cluster details
+    aksServiceConnectionTest: 'dev-aks-arm-service-connection'
+    aksServiceConnectionProd: 'prod-aks-arm-service-connection'
+
+    # This appends prefix for development/testing route to avoid collision when prod and test apps installed on same environment or cluster
+
+    ${{ if eq(variables['Build.SourceBranchName'], 'dev') }}:
+      configuration: dev
+      temp: dev
+      ingressPrefixForDevelopment: '_'
+    ${{ if ne(variables['Build.SourceBranchName'], 'dev') }}:
+      configuration: latest
+      temp: prod
+      ingressPrefixForDevelopment: ''
+
+    applicationReleaseName: $(applicationName)${{'-'}}$(temp)
+    #the namespace need to be created otherwise, helm 3 thows error during creation and causes error on pipeline
+    namespace: ${{'app-master-eth'}}
